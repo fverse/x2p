@@ -1,0 +1,16 @@
+# Toolchain channel for the x2p workspace.
+#
+# `design.md` § Tech Stack lists the core language as "Rust 1.78+" — that is a
+# minimum (MSRV), not a target. The MSRV floor is enforced in two places:
+#   1. `rust-version = "1.78"` in the workspace `Cargo.toml` (cargo refuses
+#      to compile if the active rustc is older).
+#   2. `msrv = "1.78"` in `clippy.toml` (clippy lints respect the floor).
+#
+# This file pins contributors and CI to current `stable`, which satisfies the
+# floor while giving everyone the latest compiler diagnostics, optimizations,
+# and dependency compatibility. CI MAY add a separate job that builds against
+# 1.78 to actively enforce the MSRV.
+[toolchain]
+channel    = "stable"
+components = ["rustfmt", "clippy"]
+profile    = "minimal"

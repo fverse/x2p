@@ -1,0 +1,16 @@
+[package]
+name        = "x2p-wire"
+description = "Canonical JSON parser and pretty-printer shared between x2p-core and x2p-web-adapter-host."
+version       = { workspace = true }
+edition       = { workspace = true }
+rust-version  = { workspace = true }
+license       = { workspace = true }
+repository    = { workspace = true }
+homepage      = { workspace = true }
+authors       = { workspace = true }
+publish       = { workspace = true }
+
+[lints]
+workspace = true
+
+[dependencies]

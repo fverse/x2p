@@ -1,1 +1,63 @@
+
+# Rust / Cargo
+# Note: Cargo.lock IS committed for this workspace because it ships binary
+# crates (x2p-cli, x2p-agent-server, x2p-web-adapter-host, xtask).
+target/
+**/target/
+**/*.rs.bk
+*.pdb
+
+# Criterion / proptest local artifacts (regression files ARE committed; keep
+# only the transient run output ignored).
+**/criterion/
+proptest-regressions/**/*.txt.tmp
+
+# Local-only spec workspace and reference material (preserved from prior setup).
 referernce
+.kiro
+
+# Node / TypeScript (browser extension, generated TS bindings, tooling)
+node_modules/
+extension/dist/
+extension/build/
+extension/.vite/
+dist/
+build/
+*.tsbuildinfo
+.npm/
+.pnpm-store/
+.yarn/cache/
+.yarn/install-state.gz
+
+# Coverage and profiling artifacts
+coverage/
+*.profraw
+*.profdata
+flamegraph.svg
+flamegraph.html
+
+# Environment files (never commit secrets)
+.env
+.env.*
+!.env.example
+
+# Editor and IDE state
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.history/
+
+# OS junk
+.DS_Store
+.AppleDouble
+.LSOverride
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Logs
+*.log
+logs/

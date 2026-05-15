@@ -1,0 +1,27 @@
+[package]
+name = "x2p-core"
+description = "Pure-library core for x2p: Context_Model, Prompt_Engine, Compressor, Redactor, and the plugin contract."
+version = { workspace = true }
+edition = { workspace = true }
+rust-version = { workspace = true }
+license = { workspace = true }
+repository = { workspace = true }
+homepage = { workspace = true }
+authors = { workspace = true }
+publish = { workspace = true }
+
+[lints]
+workspace = true
+
+[dependencies]
+# Typed error enums per crate; combines into the platform-wide `X2pError`
+# Thiserror gives stable derive-based
+# `Error` impls without dragging in any runtime.
+thiserror = "2"
+
+# `semver::{Version, VersionReq}` are used by the error taxonomy
+# (`SchemaVersionMismatch`, `VersionMismatch`, `ProtocolMismatch`) and will be
+# the foundation for the `SchemaVersion` newtype defined in task 3.1.
+semver = "1"
+
+[dev-dependencies]

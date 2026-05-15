@@ -1,0 +1,20 @@
+[package]
+name        = "x2p-agent-server"
+description = "Phase 1 stub for the x2p agent server. Full MCP + JSON-RPC surface lands in Phase 2 (see design.md § Roadmap)."
+version       = { workspace = true }
+edition       = { workspace = true }
+rust-version  = { workspace = true }
+license       = { workspace = true }
+repository    = { workspace = true }
+homepage      = { workspace = true }
+authors       = { workspace = true }
+publish       = { workspace = true }
+
+[lints]
+workspace = true
+
+[[bin]]
+name = "x2p-agent-server"
+path = "src/main.rs"
+
+[dependencies]

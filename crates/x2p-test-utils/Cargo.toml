@@ -1,0 +1,16 @@
+[package]
+name        = "x2p-test-utils"
+description = "Proptest strategies, generators, and fault-injection helpers shared across the x2p workspace."
+version       = { workspace = true }
+edition       = { workspace = true }
+rust-version  = { workspace = true }
+license       = { workspace = true }
+repository    = { workspace = true }
+homepage      = { workspace = true }
+authors       = { workspace = true }
+publish       = { workspace = true }
+
+[lints]
+workspace = true
+
+[dependencies]

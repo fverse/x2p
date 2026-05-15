@@ -1,0 +1,20 @@
+[package]
+name        = "x2p-cli"
+description = "The `x2p` command-line binary: capture, render, compress, inspect, replay, serve, plugin, config."
+version       = { workspace = true }
+edition       = { workspace = true }
+rust-version  = { workspace = true }
+license       = { workspace = true }
+repository    = { workspace = true }
+homepage      = { workspace = true }
+authors       = { workspace = true }
+publish       = { workspace = true }
+
+[lints]
+workspace = true
+
+[[bin]]
+name = "x2p"
+path = "src/main.rs"
+
+[dependencies]

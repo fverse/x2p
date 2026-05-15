@@ -1,0 +1,12 @@
+# Cargo configuration for the x2p workspace.
+#
+# The `xtask` alias wires the `xtask` crate as the workspace task runner so
+# that `cargo xtask <subcommand>` works from anywhere inside the workspace
+# (the standard `cargo-xtask` pattern).
+#
+# Real subcommand implementations land in later tasks:
+#   - `gen-schemas`      → task 14.1
+#   - `package-extension`→ task 26.2
+#   - `release`          → task 24
+[alias]
+xtask = "run --package xtask --"

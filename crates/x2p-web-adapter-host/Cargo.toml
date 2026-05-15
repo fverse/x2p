@@ -1,0 +1,20 @@
+[package]
+name        = "x2p-web-adapter-host"
+description = "Native-messaging host binary spawned by the browser extension; brokers Context_Bundles to the CLI."
+version       = { workspace = true }
+edition       = { workspace = true }
+rust-version  = { workspace = true }
+license       = { workspace = true }
+repository    = { workspace = true }
+homepage      = { workspace = true }
+authors       = { workspace = true }
+publish       = { workspace = true }
+
+[lints]
+workspace = true
+
+[[bin]]
+name = "x2p-web-adapter-host"
+path = "src/main.rs"
+
+[dependencies]

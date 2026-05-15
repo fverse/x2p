@@ -1,0 +1,6 @@
+# Workspace clippy configuration.
+#
+# `msrv` matches the toolchain pin in `rust-toolchain.toml` so MSRV-aware
+# lints respect the same minimum compiler version every contributor uses.
+
+msrv = "1.78"
