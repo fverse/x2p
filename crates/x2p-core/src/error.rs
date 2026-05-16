@@ -41,6 +41,8 @@
 
 use thiserror::Error;
 
+use crate::model::NodeId;
+
 /// The single error type returned by every public function in `x2p-core`.
 ///
 /// Every variant is documented with:
@@ -316,14 +318,10 @@ pub enum X2pError {
     ///
     /// Remediation: ensure each `Source_Adapter` assigns a unique
     /// `NodeId`; regenerate identifiers if necessary.
-    //
-    // Type note: `id` is a `String` placeholder until the `NodeId` newtype
-    // defined in task 3.1 lands. The wire form of a NodeId is its ULID
-    // string, so this representation is forward-compatible.
     #[error("E0100 duplicate_node_id: id={id}")]
     DuplicateNodeId {
-        /// String form of the conflicting `NodeId`.
-        id: String,
+        /// The conflicting `NodeId`.
+        id: NodeId,
     },
 
     // -----------------------------------------------------------------
@@ -334,14 +332,10 @@ pub enum X2pError {
     ///
     /// Remediation: add the missing Node to the bundle or remove the
     /// Relationship that references it.
-    //
-    // Type note: see [`X2pError::DuplicateNodeId`] for the rationale on
-    // `id: String`.
     #[error("E0110 referential_integrity: missing_node_id={id}")]
     ReferentialIntegrity {
-        /// String form of the unknown `NodeId` referenced by a
-        /// Relationship.
-        id: String,
+        /// The unknown `NodeId` referenced by a Relationship.
+        id: NodeId,
     },
 }
 
@@ -350,8 +344,7 @@ impl X2pError {
     ///
     /// The returned string is `&'static` and is the canonical identifier
     /// for telemetry, scripts, audit logs, and external automation
-    /// (Req. 24.1, design.md § Error Handling). It MUST NOT change between
-    /// releases.
+    /// It MUST NOT change between releases.
     #[must_use]
     pub fn error_code(&self) -> &'static str {
         match self {
@@ -452,7 +445,17 @@ mod tests {
     //! mandatory unit coverage that task 2.1 calls out.
 
     use super::*;
+    use crate::model::NodeId;
     use semver::{Version, VersionReq};
+    use ulid::Ulid;
+
+    fn dummy_node_id() -> NodeId {
+        NodeId(Ulid::from_string("01HZA7TR5N7M0K3Z3Q1V2W4XJ0").expect("valid ULID"))
+    }
+
+    fn dummy_node_id2() -> NodeId {
+        NodeId(Ulid::from_string("01HZA7TR5N7M0K3Z3Q1V2W4XJ1").expect("valid ULID"))
+    }
 
     /// Construct a representative instance for every variant. New variants
     /// added under `#[non_exhaustive]` MUST be added to this list as well
@@ -516,10 +519,10 @@ mod tests {
             },
             X2pError::AuditChainCorrupt { ordinal: 42 },
             X2pError::DuplicateNodeId {
-                id: "01HZA7TR5N7M0K3Z3Q1V2W4XJ0".to_string(),
+                id: dummy_node_id(),
             },
             X2pError::ReferentialIntegrity {
-                id: "01HZA7TR5N7M0K3Z3Q1V2W4XJ1".to_string(),
+                id: dummy_node_id2(),
             },
         ]
     }
@@ -668,11 +671,11 @@ mod tests {
             ),
             (X2pError::AuditChainCorrupt { ordinal: 0 }, "x2p::E0091"),
             (
-                X2pError::DuplicateNodeId { id: "n".into() },
+                X2pError::DuplicateNodeId { id: dummy_node_id() },
                 "x2p::E0100",
             ),
             (
-                X2pError::ReferentialIntegrity { id: "n".into() },
+                X2pError::ReferentialIntegrity { id: dummy_node_id() },
                 "x2p::E0110",
             ),
         ];

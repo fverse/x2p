@@ -21,4 +21,8 @@
 /// contract (Req. 24.1, 24.2; design.md § Error Handling).
 pub mod error;
 
+/// Context_Model schema: identifiers, nodes, relationships, and bundles.
+/// See `design.md` § Data Models and tasks 3.1–3.4.
+pub mod model;
+
 pub use error::X2pError;

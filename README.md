@@ -1,4 +1,4 @@
-# x2p: anything-to-prompt
+# x2p: anything-to-prompt (WIP)
 
 Convert arbitrary digital contexts (web pages, codebases, PDFs, images, dashboards) into structured, token-efficient prompts for LLMs.
 
