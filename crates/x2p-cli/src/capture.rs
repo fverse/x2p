@@ -59,7 +59,11 @@ fn extract_title(doc: &Html) -> String {
 }
 
 fn flatten_text<'a, I: Iterator<Item = &'a str>>(it: I) -> String {
-    it.collect::<String>().split_whitespace().collect::<Vec<_>>().join(" ")
+    // Join fragments with a space first, so that adjacent inline elements
+    // (e.g. <div>01</div><div>Burrata</div>) don't smash into "01Burrata".
+    // Then normalize runs of whitespace into single spaces.
+    let joined = it.collect::<Vec<&str>>().join(" ");
+    joined.split_whitespace().collect::<Vec<_>>().join(" ")
 }
 
 fn text_of(el: ElementRef<'_>) -> String {
