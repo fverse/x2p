@@ -4,71 +4,95 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this project is
 
-`x2p` (anything-to-prompt) converts arbitrary digital contexts — web pages, codebases, PDFs, images — into structured, token-efficient prompts for LLMs. It is a plugin-driven Rust framework with two delivery surfaces:
-- **CLI** (`x2p`): terminal-based capture and render
-- **Browser Extension** (Chromium + Firefox, MV3): live web UI capture via a native-messaging host
+`x2p` (anything-to-prompt) is a small Rust CLI that fetches a web page and
+turns it into a markdown prompt for an LLM, with optional token-budget
+pruning. Scope today is **v0.1**: a single value loop end-to-end. The earlier
+9-crate spec in `.kiro/specs/context-to-prompt-platform/` is aspirational —
+treat it as the long-term vision, not the current shape of the code.
 
-## Build and test commands
+## Build, test, run
 
 ```bash
-# Build the entire workspace
 cargo build
-
-# Run all tests
 cargo test
-
-# Run tests for a single crate
-cargo test -p x2p-core
-
-# Run a single test by name
-cargo test -p x2p-core error_codes_are_stable_and_unique
-
-# Lint (locally: warnings; CI escalates to errors via RUSTFLAGS="-D warnings")
-cargo clippy
-
-# Workspace task runner (subcommands are stubs — implementations land in later tasks)
-cargo xtask gen-schemas        # → task 14.1
-cargo xtask package-extension  # → task 26.2
-cargo xtask release            # → task 24
+cargo run -- capture https://example.com -o /tmp/b.json
+cargo run -- render /tmp/b.json --budget 4000
 ```
 
-## Crate architecture
+## Workspace layout (2 crates)
 
-The workspace uses a strict layering: `x2p-core` is a pure library with no I/O; every side effect is injected via traits (`Storage`, `Clock`, `Rng`, `Logger`, `PluginHost`, `Tokenizer`). Other crates depend on it and own all I/O.
+- `crates/x2p-core` — pure library, no I/O. Owns `Bundle`, `Block`, the
+  markdown renderer, the cl100k tokenizer wrapper, and the budget-pruner.
+- `crates/x2p-cli` — the `x2p` binary. Owns clap, reqwest (fetching with a
+  polite User-Agent), scraper-based HTML → Block conversion, and file I/O.
 
-| Crate | Role | Status |
-|---|---|---|
-| `x2p-core` | Context_Model schema, Prompt_Engine, Compressor, Redactor, plugin contract | Active |
-| `x2p-wire` | Canonical JSON parser/serializer (single wire-format authority) | Skeleton |
-| `x2p-cli` | `x2p` CLI binary | Skeleton (task 15.x) |
-| `x2p-agent-server` | MCP tool server + JSON-RPC fallback | Phase 2 stub |
-| `x2p-web-adapter-host` | Native-messaging host for the browser extension | Skeleton (task 20.x) |
-| `x2p-plugin-host` | Plugin contract types (`PluginHost` trait, `PluginManifest`, `CapabilityManifest`) | Phase 1 contract only — no runtime |
-| `x2p-storage` | BLAKE3 content-addressed cache + sled index + audit-log hash chain | Skeleton (tasks 7–8) |
-| `x2p-tokenizers` | `cl100k`, `o200k`, llama tokenizers behind the `Tokenizer` trait | Skeleton (task 6.x) |
-| `x2p-test-utils` | Shared proptest strategies and fault-injection helpers | Skeleton (task 5.x) |
-| `xtask` | `cargo xtask` workspace task runner | Active stubs |
+Surfaces beyond the CLI (browser extension, MCP agent server, plugin host,
+storage cache, audit log, policy engine) do **not** exist yet. Add them
+*only* when a concrete user need appears, not preemptively. The 9-crate
+layout in git history was scrapped for being overbuilt before any user value
+had shipped — don't recreate it module-by-module.
 
-## Key domain concepts
+## Domain model
 
-**`ContextBundle`** (`x2p-core::model::bundle`) — the wire-level root of a capture. Contains `nodes`, `relationships`, `assets`, `sessions`, `redactions`, and a `bundle_id` (BLAKE3-256 self-attesting hash). The canonical JSON key order is lexicographic by Unicode code-point.
+The Context Model is intentionally tiny:
 
-**`Node`** / **`NodeKind`** (`x2p-core::model::node`) — the fundamental unit of captured content. NodeKinds cover web UI primitives (Region, Component, TextField, WorkflowEvent, etc.) and cross-modality types (Text, Image, Code, Data).
+```rust
+struct Bundle { url, title, captured_at, blocks: Vec<Block> }
+enum Block { Heading | Paragraph | List | Code | Table | Link | Form }
+```
 
-**Identifiers** (`x2p-core::model::ids`) — all IDs are 128-bit ULIDs (time-ordered, lexicographically sortable). `ContentKey` is a 32-byte BLAKE3-256 hash, wire-encoded as 64 lowercase hex chars.
+No Node/Relationship graph, no ULIDs, no `schema_version`, no canonical JSON,
+no BLAKE3 `bundle_id`, no annotations, no sessions, no workflows. Bundles
+serialize with plain `serde_json`. Internally-tagged via `#[serde(tag = "kind")]`.
+Don't add fields speculatively — wait for a renderer or pruner that needs them.
 
-**`SchemaVersion`** — every bundle carries a `schema_version` (`semver::Version`). The loader accepts the range `^1` (`compatible_bundle_range()`). Mismatches produce `X2pError::SchemaVersionMismatch`.
+## Capture pipeline
 
-**Plugin system** — Phase 1 ships the contract only (`PluginHost` trait, `PluginManifest`, `CapabilityManifest` in `x2p-plugin-host`). The Wasmtime component-model runtime is Phase 2.
+1. `reqwest::Client` with a UA string built from `CARGO_PKG_VERSION`.
+   Wikipedia and other large sites 403 the default `reqwest/x.y.z` UA —
+   keep ours set.
+2. `scraper::Html::parse_document` → walk the body.
+3. Tag-by-tag conversion: `h1..h6` → Heading, `p` → Paragraph, `ul/ol` →
+   List, `pre>code` → Code (lang from `class="language-…"`), `table` → Table.
+4. Skip `script`, `style`, `nav`, `header`, `footer`, `aside`, `noscript`, `svg`.
+5. No JS execution — static and SSR pages only. Add headless Chromium
+   (`chromiumoxide`) when a real SPA actually fails, not before.
 
-## Error taxonomy
+## Render and prune
 
-`X2pError` in `x2p-core::error` is the single error type for the entire platform. Error codes (`x2p::E####`) are **stable across releases** — never change a code once shipped; telemetry and audit chains depend on them. Every variant must be covered by the exhaustive match in `error_code()` and `remediation()`.
+- `render(&Bundle, &RenderConfig) -> String` — pure function from bundle to
+  markdown. Determinism is desirable; don't introduce hashmaps or time-based
+  ordering in the output.
+- If `RenderConfig.budget_tokens` is set, `prune::shrink` repeatedly drops
+  the lowest-priority non-Heading block and re-renders until it fits. The
+  priority order is in `prune.rs`; tune there if pruning quality matters for
+  a real task. Algorithm is O(n²) in tokens — fine for v0.1, revisit only if
+  it bites.
 
-## Lint policy
+## Lint and toolchain
 
-- `unsafe_code` is `forbid`den in `x2p-core` and `x2p-plugin-host`; it is `warn` at the workspace level for other crates.
-- Clippy `all` + `pedantic` are enabled workspace-wide. Accepted noisy lints: `module_name_repetitions`, `missing_errors_doc`, `missing_panics_doc`, `doc_markdown`.
-- CI sets `RUSTFLAGS="-D warnings"` to treat all warnings as errors; locally they remain warnings.
-- MSRV is **1.78** (enforced by `rust-version` in `Cargo.toml` and `msrv` in `clippy.toml`).
-- Design-doc identifiers like `Context_Model`, `Plugin_Manifest` use underscore notation intentionally — do not wrap them in backticks to satisfy `doc_markdown`.
+- MSRV **1.78** (pinned in `rust-toolchain.toml`, `clippy.toml`, and
+  `Cargo.toml`).
+- `cargo clippy` runs `clippy::all` at workspace level. Pedantic is off —
+  add it back only if the codebase grows enough to need it.
+- `unsafe_code` is `warn` workspace-wide and `forbid` in `x2p-core` (see
+  `lib.rs`).
+
+## When to add complexity back
+
+The reference spec in `.kiro/specs/` lists 25 EARS requirements and 35
+correctness properties. Treat that as a menu, not a roadmap. Resist the
+urge to scaffold any of:
+
+- BLAKE3 content-addressed storage / sled index
+- Plugin manifest, sandbox, signed plugins
+- MCP agent server
+- Audit log hash chain
+- Policy engine + egress allowlist
+- Workflow capture + deterministic replay
+- Canonical JSON + bundle_id self-attestation
+- Stable `x2p::E####` error codes
+
+…until there is a concrete user (yourself counts) blocked on the feature.
+Each of these is a 1-PR addition when the need is real, and a multi-week
+distraction when it isn't.

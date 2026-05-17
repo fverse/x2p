@@ -2,53 +2,24 @@
 resolver = "2"
 members = [
     "crates/x2p-core",
-    "crates/x2p-wire",
-    "crates/x2p-test-utils",
-    "crates/x2p-storage",
-    "crates/x2p-tokenizers",
     "crates/x2p-cli",
-    "crates/x2p-web-adapter-host",
-    "crates/x2p-agent-server",
-    "crates/x2p-plugin-host",
-    "xtask",
 ]
 
-# All workspace members share these baseline values. Per-crate Cargo.toml files
-# inherit them via `*.workspace = true`.
 [workspace.package]
 version       = "0.1.0"
 edition       = "2021"
 rust-version  = "1.78"
 license       = "Apache-2.0"
 repository    = "https://github.com/x2p-platform/x2p"
-homepage      = "https://github.com/x2p-platform/x2p"
 authors       = ["x2p platform contributors"]
 publish       = false
 
-# Workspace-wide lint configuration. The CI build sets `RUSTFLAGS="-D warnings"`
-# (or `cargo clippy -- -D warnings`) to escalate every warning to a hard error
-# in CI; locally these stay as warnings so day-to-day work is not painful.
-#
-# `unsafe_code = "forbid"` is set at the workspace level for crates that opt in;
-# `x2p-core` overrides it to `forbid` explicitly via its own `lib.rs` attribute
-# so any future contributor sees the boundary in source.
 [workspace.lints.rust]
-unsafe_code           = "warn"
-missing_debug_implementations = "warn"
-unreachable_pub       = "warn"
-rust_2018_idioms      = { level = "warn", priority = -1 }
+unsafe_code      = "warn"
+rust_2018_idioms = { level = "warn", priority = -1 }
 
 [workspace.lints.clippy]
-all     = { level = "warn", priority = -1 }
-pedantic = { level = "warn", priority = -1 }
-# Pedantic lints we accept as too noisy for the platform's style:
-module_name_repetitions = "allow"
-missing_errors_doc       = "allow"
-missing_panics_doc       = "allow"
-# `doc_markdown` flags every `Snake_Case` design-doc identifier (Context_Model,
-# Plugin_Manifest, etc.) — those are deliberate references to the canonical
-# names in `design.md`, not missing-backtick mistakes. Allow at workspace level.
-doc_markdown            = "allow"
+all = { level = "warn", priority = -1 }
 
 [profile.release]
 lto           = "thin"
